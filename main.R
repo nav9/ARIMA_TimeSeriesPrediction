@@ -49,28 +49,47 @@ timePer = 12#time period
 #---dividing into test and training sets
 tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
 te = window(d, start=trainEnYr, end=c(testEnYr, timePer))
+#---predict with normal arima
 acf(diff(log(tr)))
 pacf(diff(log(tr)))
-fit <- arima(log(tr), c(0, 1.4, 1),seasonal = list(order = c(0, 1.4, 1), period = timePer))
+fit <- arima(log(tr), c(2, 1, 1),seasonal = list(order = c(2, 1, 1), period = timePer))
 oriPred5 <- predict(fit, n.ahead = shortPredAhead)
 oriPred15 <- predict(fit, n.ahead = longPredAhead)
 oriPred5$pred = exp(oriPred5$pred)
 oriPred15$pred = exp(oriPred15$pred)
-ts.plot(d, oriPred5$pred, oriPred15$pred, log = "y", lty = c(1,2,3), col=c("black","green","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
+#---auto arima
+aa <- auto.arima(tr)
+autoF5 <- forecast(aa,h=5)
+autoF15 <- forecast(aa,h=15)
+#---plot all
+ts.plot(d, oriPred5$pred, oriPred15$pred, autoF5$Forecast, autoF15$Forecast, log = "y", lty = c(3,2,3,4,5), col=c("black","green","red","yellow","blue"))
+#---calculate moving average
+ma <- rollmean(d, 10, align = c("left"))
+plot(ma, lty=c(2), col=c("black"))
+lines(d, lty=c(3), col=c("red"))
+#---get arima for moving average
+acf(diff(diff(ma)))
+pacf(diff(diff(ma)))
+maFit <- arima(ma, c(2, 2, 1),seasonal = list(order = c(2, 2, 1), period = timePer))
+maPred5 <- predict(maFit, n.ahead = shortPredAhead)
+maPred15 <- predict(maFit, n.ahead = longPredAhead)
+ts.plot(d, maPred5$pred, maPred15$pred, log = "y", lty = c(3,2,3), col=c("black","green","red"))
 
 
-#---checking for stationarity and predict
-acf(diff(log(d)))
-pacf(diff(log(d)))
-fitTr <- arima(log(tr), c(1,1,2),seasonal=list(order=c(1,1,2),period=timePer))
-trPred <- predict(fitTr, n.ahead=shortPredAhead*timePer)
-ts.plot(d,tr,exp(trPred$pred), log = "y", lty = c(3,3,3), col=c("green","blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
-#---measure errors
-p1 = exp(trPred$pred[1:(shortPredAhead*timePer)])
-p2 = te[1:(shortPredAhead*timePer)]
-er = p1 - p2
-plot(er)
-meanSquaredError(p2, p1)
+
+
+# #---checking for stationarity and predict
+# acf(diff(log(d)))
+# pacf(diff(log(d)))
+# fitTr <- arima(log(tr), c(1,1,2),seasonal=list(order=c(1,1,2),period=timePer))
+# trPred <- predict(fitTr, n.ahead=shortPredAhead*timePer)
+# ts.plot(d,tr,exp(trPred$pred), log = "y", lty = c(3,3,3), col=c("green","blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
+# #---measure errors
+# p1 = exp(trPred$pred[1:(shortPredAhead*timePer)])
+# p2 = te[1:(shortPredAhead*timePer)]
+# er = p1 - p2
+# plot(er)
+# meanSquaredError(p2, p1)
 
 
 # testLim = 40
