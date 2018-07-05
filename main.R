@@ -26,40 +26,95 @@ d = datasets::AirPassengers#for strong seasonality and trend
 #d = datasets::nhtemp#almost stationary already
 #d = datasets::USAccDeaths#strong seasonality but no trend
 
-testLim = 40
-predAhead = 20
-plot(d, main="Main plot", xlab="years", ylab="temperature")
-abline(reg=lm(d~time(d)))
-message("Type:",class(d))
-message("Starts at:",start(d))
-message("Ends at:",end(d))
-message("Frequency:",frequency(d))
-print(summary(d))#cycle(d)
-plot(aggregate(d,FUN=mean))#shows yearly trend
-boxplot(d~cycle(d))#plot across months. Shows seasonality
-plot(log(d), main="log(d) removes unequal variances", xlab="years", ylab="temperature")
-plot(diff(log(d)), main="diff(log(d) de-trends", xlab="years", ylab="temperature")
-#plot(log(diff(d)), main="As log(diff(d))", xlab="years", ylab="temperature")
-adft = adf.test(diff(log(d)), alternative="stationary", k=0)
+trainStYr = 1949; trainEnYr = trainStYr+6
+testStYr = trainEnYr; testEnYr = 1960
+longPredAhead = 15
+shortPredAhead = 5
+timePer = 12#time period
+# plot(d, main="Original plot", xlab="years", ylab="temperature", lty=c(1))
+# abline(reg=lm(d~time(d)))
+# message("Type:",class(d))
+# message("Starts at:",start(d))
+# message("Ends at:",end(d))
+# message("Frequency:",frequency(d))
+# print(summary(d))#cycle(d)
+# plot(aggregate(d,FUN=mean))#shows yearly trend
+# boxplot(d~cycle(d))#plot across months. Shows seasonality
+# plot(log(d), main="log(d) removes unequal variances", xlab="years", ylab="temperature")
+# plot(diff(log(d)), main="diff(log(d) de-trends", xlab="years", ylab="temperature")
+# #plot(log(diff(d)), main="As log(diff(d))", xlab="years", ylab="temperature")
+#adft = adf.test(diff(log(d)), alternative="stationary", k=0)
 acf(diff(log(d)))
 pacf(diff(log(d)))
-fit <- arima(log(d), c(0, 1, 1),seasonal = list(order = c(0, 1, 1), period = 12))
-pred <- predict(fit, n.ahead = 15*12)
-ts.plot(d,exp(pred$pred), log = "y", lty = c(1,3), col=c("blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
+fit <- arima(log(d), c(0, 1, 1),seasonal = list(order = c(0, 1, 1), period = timePer))
+oriPred5 <- predict(fit, n.ahead = shortPredAhead*timePer)
+oriPred15 <- predict(fit, n.ahead = longPredAhead*timePer)
+ts.plot(d, exp(oriPred5$pred), exp(oriPred15$pred), log = "y", lty = c(1,2,3), col=c("black","green","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
 
 #---dividing into test and training sets
-tr = window(d, start=1949, end=c(1955,12))
-te = window(d, start=1956, end=c(1960,12))
+tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
+te = window(d, start=trainEnYr, end=c(testEnYr, timePer))
 #---checking for stationarity and predict
 acf(diff(log(d)))
 pacf(diff(log(d)))
-fitTr <- arima(log(tr), c(1,1,2),seasonal=list(order=c(1,1,2),period=12))
-trPred <- predict(fitTr, n.ahead=5*12)
+fitTr <- arima(log(tr), c(1,1,2),seasonal=list(order=c(1,1,2),period=timePer))
+trPred <- predict(fitTr, n.ahead=shortPredAhead*timePer)
 ts.plot(d,tr,exp(trPred$pred), log = "y", lty = c(3,3,3), col=c("green","blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
 #---measure errors
-p1 = exp(trPred$pred[1:(5*12)])
-p2 = te[1:(5*12)]
+p1 = exp(trPred$pred[1:(shortPredAhead*timePer)])
+p2 = te[1:(shortPredAhead*timePer)]
 er = p1 - p2
+plot(er)
+meanSquaredError(p2, p1)
+
+
+# testLim = 40
+# predAhead = 20
+# plot(d, main="Main plot", xlab="years", ylab="temperature")
+# abline(reg=lm(d~time(d)))
+# message("Type:",class(d))
+# message("Starts at:",start(d))
+# message("Ends at:",end(d))
+# message("Frequency:",frequency(d))
+# print(summary(d))#cycle(d)
+# plot(aggregate(d,FUN=mean))#shows yearly trend
+# boxplot(d~cycle(d))#plot across months. Shows seasonality
+# plot(log(d), main="log(d) removes unequal variances", xlab="years", ylab="temperature")
+# plot(diff(log(d)), main="diff(log(d) de-trends", xlab="years", ylab="temperature")
+# #plot(log(diff(d)), main="As log(diff(d))", xlab="years", ylab="temperature")
+# adft = adf.test(diff(log(d)), alternative="stationary", k=0)
+# acf(diff(log(d)))
+# pacf(diff(log(d)))
+# fit <- arima(log(d), c(0, 1, 1),seasonal = list(order = c(0, 1, 1), period = 12))
+# pred <- predict(fit, n.ahead = 15*12)
+# ts.plot(d,exp(pred$pred), log = "y", lty = c(1,3), col=c("blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
+#
+# #---dividing into test and training sets
+# tr = window(d, start=1949, end=c(1955,12))
+# te = window(d, start=1956, end=c(1960,12))
+# #---checking for stationarity and predict
+# acf(diff(log(d)))
+# pacf(diff(log(d)))
+# fitTr <- arima(log(tr), c(1,1,2),seasonal=list(order=c(1,1,2),period=12))
+# trPred <- predict(fitTr, n.ahead=5*12)
+# ts.plot(d,tr,exp(trPred$pred), log = "y", lty = c(3,3,3), col=c("green","blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
+# #---measure errors
+# p1 = exp(trPred$pred[1:(5*12)])
+# p2 = te[1:(5*12)]
+# er = p1 - p2
+# plot(er)
+# meanSquaredError(p2, p1)
+
+
+meanSquaredError <- function(original, predicted) {
+    original = na.trim(original)
+    predicted = na.trim(predicted)
+    original
+    predicted
+    m = sqrt((original - predicted)^2)
+    plot(m, main="MSE", xlab="error")
+    print(m)
+}
 
 
 
