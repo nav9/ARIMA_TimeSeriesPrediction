@@ -44,16 +44,18 @@ timePer = 12#time period
 # plot(diff(log(d)), main="diff(log(d) de-trends", xlab="years", ylab="temperature")
 # #plot(log(diff(d)), main="As log(diff(d))", xlab="years", ylab="temperature")
 #adft = adf.test(diff(log(d)), alternative="stationary", k=0)
-acf(diff(log(d)))
-pacf(diff(log(d)))
-fit <- arima(log(d), c(0, 1, 1),seasonal = list(order = c(0, 1, 1), period = timePer))
-oriPred5 <- predict(fit, n.ahead = shortPredAhead*timePer)
-oriPred15 <- predict(fit, n.ahead = longPredAhead*timePer)
-ts.plot(d, exp(oriPred5$pred), exp(oriPred15$pred), log = "y", lty = c(1,2,3), col=c("black","green","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
 
 #---dividing into test and training sets
 tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
 te = window(d, start=trainEnYr, end=c(testEnYr, timePer))
+acf(diff(log(tr)))
+pacf(diff(log(tr)))
+fit <- arima(log(tr), c(0, 1, 1),seasonal = list(order = c(0, 1, 1), period = timePer))
+oriPred5 <- predict(fit, n.ahead = shortPredAhead*timePer)
+oriPred15 <- predict(fit, n.ahead = longPredAhead*timePer)
+ts.plot(d, exp(oriPred5$pred), exp(oriPred15$pred), log = "y", lty = c(1,2,3), col=c("black","green","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
+
+
 #---checking for stationarity and predict
 acf(diff(log(d)))
 pacf(diff(log(d)))
