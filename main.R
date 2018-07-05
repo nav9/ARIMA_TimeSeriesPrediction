@@ -26,8 +26,9 @@ d = datasets::AirPassengers#for strong seasonality and trend
 #d = datasets::nhtemp#almost stationary already
 #d = datasets::USAccDeaths#strong seasonality but no trend
 
-trainStYr = 1949; trainEnYr = trainStYr+6
-testStYr = trainEnYr; testEnYr = 1960
+stYr = 1949; enYr = 1960
+trainStYr = stYr; trainEnYr = enYr - 2;
+testStYr = trainEnYr; testEnYr = enYr;
 longPredAhead = 15
 shortPredAhead = 5
 timePer = 12#time period
@@ -50,10 +51,12 @@ tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
 te = window(d, start=trainEnYr, end=c(testEnYr, timePer))
 acf(diff(log(tr)))
 pacf(diff(log(tr)))
-fit <- arima(log(tr), c(0, 1, 1),seasonal = list(order = c(0, 1, 1), period = timePer))
-oriPred5 <- predict(fit, n.ahead = shortPredAhead*timePer)
-oriPred15 <- predict(fit, n.ahead = longPredAhead*timePer)
-ts.plot(d, exp(oriPred5$pred), exp(oriPred15$pred), log = "y", lty = c(1,2,3), col=c("black","green","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
+fit <- arima(log(tr), c(0, 1.4, 1),seasonal = list(order = c(0, 1.4, 1), period = timePer))
+oriPred5 <- predict(fit, n.ahead = shortPredAhead)
+oriPred15 <- predict(fit, n.ahead = longPredAhead)
+oriPred5$pred = exp(oriPred5$pred)
+oriPred15$pred = exp(oriPred15$pred)
+ts.plot(d, oriPred5$pred, oriPred15$pred, log = "y", lty = c(1,2,3), col=c("black","green","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
 
 
 #---checking for stationarity and predict
