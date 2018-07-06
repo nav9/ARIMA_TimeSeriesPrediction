@@ -74,17 +74,20 @@ print(cat("AutoArima: AIC:", aa$aic, ", AICC:", aa$aicc, ", ARMA:", aa$arma, ", 
 aaFitted <- aa$fitted; aaResid <- aa$residuals
 #par(mfrow=c(2,1))#set for subplot
 plot(fitResid, main="Residuals", lty=3,col="red");lines(aaResid, lty=4,col="blue");legend("topleft", legend=c("MyArima", "AutoArima"), col=c("red", "blue"), lty=1:2, cex=0.8)
-par(mfrow=c(1,1))#reset to single plots
-plot(aaFitted, lty=c(3), main="AutoArimaFitted", ylab="people", col="blue");lines(tr, lty=c(3), col="black");legend("topleft", legend=c("fitted", "original"), col=c("blue", "black"), lty=1:2, cex=0.8)
+#par(mfrow=c(1,1))#reset to single plots
+plot(d, lty=c(3), col="black");lines(aaFitted, lty=c(3), main="AutoArimaFitted", ylab="people", col="blue");legend("topleft", legend=c("fitted", "original"), col=c("blue", "black"), lty=1:2, cex=0.8)
 autoF5 <- forecast(aa,h=5)
 autoF15 <- forecast(aa,h=15)
-print(cat("Auto arima estimated for F5: ", autoF5$method))
-print(cat("Auto arima estimated for F15: ", autoF15$method))
-colorOrder = c("black","green","red","blue")
-#
-# #---plot all pred
-# ts.plot(d, oriPred5$pred, oriPred15$pred, autoF5$Forecast, autoF15$Forecast, log = "y", lty = c(3,2,3,4,5), col=colorOrder, ylab="people", main="Predictions")
-# legend("topleft", legend=c("ori5", "ori15", "auto5", "auto15"), col=colorOrder, lty=1:2, cex=0.8)
+print(cat("Auto arima estimated for F5: ", autoF5$method));print(cat("Auto arima estimated for F15: ", autoF15$method))
+
+#---plot all pred
+colorOrder = c("black","green","red","blue","cyan")
+ts.plot(d, oriPred5$pred, oriPred15$pred, autoF5$mean, autoF15$mean, log = "y", lty = c(3,2,3,6,7), col=colorOrder, ylab="people", main="Predictions");legend("topleft", legend=c("d","ori5", "ori15", "auto5", "auto15"), col=colorOrder, lty=1:2, cex=0.8)
+am5 <- meanSquaredError(te[1:shortPredAhead], autoF5$mean[1:shortPredAhead])
+am15 <- meanSquaredError(te[1:shortPredAhead], autoF15$mean[1:longPredAhead])
+
+
+
 # lines(c(trainEnYr+1,trainEnYr+1+(longPredAhead/12)), c(300,300))
 
 # trnd <- rollmean(d, meanRng, align = c("left"))
