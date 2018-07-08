@@ -12,8 +12,8 @@ library(zoo)
 library(expsmooth)
 library(ggplot2)
 require(graphics)
-library(neuralnet)
-library(RSNNS)
+#library(neuralnet)
+#library(RSNNS)
 library(nnfor)
 #if(!is.null(dev.list())) dev.off()#clear old plots
 cat("\f")#clear console
@@ -42,7 +42,7 @@ d = datasets::AirPassengers#for strong seasonality and trend
 
 stYr = 1949; enYr = 1960
 trainStYr = stYr; trainEnYr = enYr - 4;
-testStYr = trainEnYr+1; testEnYr = enYr;
+testStYr = trainEnYr; testEnYr = enYr;
 longPredAhead = 15
 shortPredAhead = 5
 meanRng = 3;#25;
@@ -55,22 +55,22 @@ showACFPlots(diff(d))
 #---dividing into test and training sets
 colorOrder=c("black", "red")
 tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
-te = window(d, start=testStYr, end=c(testEnYr, timePer))
+te = window(d, start=testStYr+1, end=c(testEnYr, timePer))
 ts.plot(tr, te, lty = c(4,3), col=colorOrder, ylab="people", main="Train.Test")
 legend("topleft", legend=c("training", "test"), col=colorOrder, lty=1:2, cex=0.8)
 
-# #---predict with normal arima
-# arimaParam = c(1, 2, 2)
-# print(cat("Using arima: ", autoF5$method))
-# fit <- arima(tr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
-# print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
-# fitResid <- fit$residuals
-# oriPred5 <- predict(fit, n.ahead = shortPredAhead)
-# oriPred15 <- predict(fit, n.ahead = longPredAhead)
-# m5 <- meanSquaredError(te[1:shortPredAhead], oriPred5$pred[1:shortPredAhead])
-# m15 <- meanSquaredError(te[1:shortPredAhead], oriPred15$pred[1:longPredAhead])
-# plot(m15, xlab="time", ylab="error", main="MSE MyArima", lty=2, col="red");lines(m5, lty=3, col="blue");legend("topleft", legend=c("pred15", "pred5"), col=c("red", "blue"), lty=1:2, cex=0.8)
-#
+#---predict with normal arima
+arimaParam = c(1, 2, 2)
+print(cat("Using arima: ", autoF5$method))
+fit <- arima(tr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
+print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
+fitResid <- fit$residuals
+oriPred5 <- predict(fit, n.ahead = shortPredAhead)
+oriPred15 <- predict(fit, n.ahead = longPredAhead)
+m5 <- meanSquaredError(te[1:shortPredAhead], oriPred5$pred[1:shortPredAhead])
+m15 <- meanSquaredError(te[1:shortPredAhead], oriPred15$pred[1:longPredAhead])
+plot(m15, xlab="time", ylab="error", main="MSE MyArima", lty=2, col="red");lines(m5, lty=3, col="blue");legend("topleft", legend=c("pred15", "pred5"), col=c("red", "blue"), lty=1:2, cex=0.8)
+
 # #---auto arima
 # aa <- auto.arima(tr)
 # print(cat("AutoArima: AIC:", aa$aic, ", AICC:", aa$aicc, ", ARMA:", aa$arma, ", BIC:", aa$bic))
@@ -93,17 +93,22 @@ legend("topleft", legend=c("training", "test"), col=colorOrder, lty=1:2, cex=0.8
 trnd <- rollmean(d, meanRng, align = c("left"))
 plot(trnd, main="Trend")
 #---residual
-residu <- d[1:length(trnd)] - trnd
+residu <- d[1:length(trnd)] - trnd;#residue = original - trend
 plot(residu, main="Residue")
 
 #---ANN
 air.train <- window(residu, end = trainEnYr)
-autoplot(air.train) + ylab("Number of Passengers") + ggtitle("Training dataset") + theme_minimal()
-air.test <- window(residu, start = trainEnYr)
-autoplot(air.test) + ylab("Number of Passengers") + ggtitle("Testing dataset") + theme_minimal()
+autoplot(air.train) + ylab("Passengers") + ggtitle("Training")
+air.test <- window(residu, start = testStYr)
+autoplot(air.test) + ylab("Passengers") + ggtitle("Testing")
 # Fitting MLP model
 air.fit.mlp <- mlp(air.train, hd.auto.type = "valid")
 air.fcst.mlp <- forecast(air.fit.mlp, h = 35)
+# Visualize model predictions
+autoplot(air.test) + autolayer(air.fcst.mlp, series = "MLP w/ opt. hidden nodes", linetype = "dashed") + theme_minimal() + ylab("Number of Passengers")
+
+
+
 
 # #prepare data
 # s = seq(1:length(tr))
