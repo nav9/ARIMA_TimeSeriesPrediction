@@ -14,6 +14,7 @@ library(ggplot2)
 require(graphics)
 library(neuralnet)
 library(RSNNS)
+library(nnfor)
 #if(!is.null(dev.list())) dev.off()#clear old plots
 cat("\f")#clear console
 #rm(list = setdiff(ls(), lsf.str()))#remove all objects except functions
@@ -96,16 +97,28 @@ residu <- d[1:length(trnd)] - trnd
 plot(residu, main="Residue")
 
 #---ANN
-#prepare data
-# v=c();for (i in residu) {print(i);v=append(v,i);}
+air.train <- window(residu, end = trainEnYr)
+autoplot(air.train) + ylab("Number of Passengers") + ggtitle("Training dataset") + theme_minimal()
+air.test <- window(residu, start = trainEnYr)
+autoplot(air.test) + ylab("Number of Passengers") + ggtitle("Testing dataset") + theme_minimal()
+# Fitting MLP model
+air.fit.mlp <- mlp(air.train, hd.auto.type = "valid")
+air.fcst.mlp <- forecast(air.fit.mlp, h = 35)
 
-s = seq(1:length(tr))
-incr = 1
-df = data.frame()
-while ((incr+timePer) < length(tr)) {
-    df <- rbind(df, tr[incr:(incr+timePer-1)])
-    incr = incr + 1;
-}
+# #prepare data
+# s = seq(1:length(tr))
+# incr = 1
+# ddd = data.frame()
+# while ((incr+timePer) < length(tr)) {
+#     ddd <- rbind(ddd, tr[incr:(incr+timePer)])#13 cols = 12 train + 1 target
+#     incr = incr + 1;
+# }
+# #shuffle ddd
+# ddd <- ddd[sample(1:nrow(ddd),length(1:nrow(ddd))), 1:ncol(ddd)]
+#
+# traValues <- ddd[,1:timePer]
+# traTargets <- decodeClassLabels(ddd[,timePer+1])
+
 
 
 
