@@ -6,19 +6,21 @@
 #decompose() or stl() to examine and possibly remove components of the series
 #adf.test(), ACF, PACF for stationarity check and order of differencing
 
-
 library(datasets)
 library(tseries)
 library(zoo)
 library(expsmooth)
 library(ggplot2)
 require(graphics)
+library(neuralnet)
+library(RSNNS)
 #if(!is.null(dev.list())) dev.off()#clear old plots
 cat("\f")#clear console
 #rm(list = setdiff(ls(), lsf.str()))#remove all objects except functions
 #rm(list=ls())#remove all objects loaded into R
 #rm(list=lsf.str())#remove all functions but not variables
 #rm(list=ls(all=TRUE))#clear all variables
+library(rstudioapi);rstudioapi::getActiveDocumentContext()$path#set path as current working directory
 
 # fileName = "monthly-water-usage-mlday-london.csv"
 # dd<-read.csv(fileName, header=TRUE, sep=",", stringsAsFactors=FALSE)
@@ -42,7 +44,7 @@ trainStYr = stYr; trainEnYr = enYr - 4;
 testStYr = trainEnYr+1; testEnYr = enYr;
 longPredAhead = 15
 shortPredAhead = 5
-meanRng = 25;
+meanRng = 3;#25;
 timePer = 12#time period
 
 if (isTRUE(isStationary(d))) {print("is stationary")} else {print("is not stationary")}
@@ -56,41 +58,103 @@ te = window(d, start=testStYr, end=c(testEnYr, timePer))
 ts.plot(tr, te, lty = c(4,3), col=colorOrder, ylab="people", main="Train.Test")
 legend("topleft", legend=c("training", "test"), col=colorOrder, lty=1:2, cex=0.8)
 
-#---predict with normal arima
-arimaParam = c(1, 2, 2)
-print(cat("Using arima: ", autoF5$method))
-fit <- arima(tr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
-print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
-fitResid <- fit$residuals
-oriPred5 <- predict(fit, n.ahead = shortPredAhead)
-oriPred15 <- predict(fit, n.ahead = longPredAhead)
-m5 <- meanSquaredError(te[1:shortPredAhead], oriPred5$pred[1:shortPredAhead])
-m15 <- meanSquaredError(te[1:shortPredAhead], oriPred15$pred[1:longPredAhead])
-plot(m15, xlab="time", ylab="error", main="MSE MyArima", lty=2, col="red");lines(m5, lty=3, col="blue");legend("topleft", legend=c("pred15", "pred5"), col=c("red", "blue"), lty=1:2, cex=0.8)
+# #---predict with normal arima
+# arimaParam = c(1, 2, 2)
+# print(cat("Using arima: ", autoF5$method))
+# fit <- arima(tr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
+# print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
+# fitResid <- fit$residuals
+# oriPred5 <- predict(fit, n.ahead = shortPredAhead)
+# oriPred15 <- predict(fit, n.ahead = longPredAhead)
+# m5 <- meanSquaredError(te[1:shortPredAhead], oriPred5$pred[1:shortPredAhead])
+# m15 <- meanSquaredError(te[1:shortPredAhead], oriPred15$pred[1:longPredAhead])
+# plot(m15, xlab="time", ylab="error", main="MSE MyArima", lty=2, col="red");lines(m5, lty=3, col="blue");legend("topleft", legend=c("pred15", "pred5"), col=c("red", "blue"), lty=1:2, cex=0.8)
+#
+# #---auto arima
+# aa <- auto.arima(tr)
+# print(cat("AutoArima: AIC:", aa$aic, ", AICC:", aa$aicc, ", ARMA:", aa$arma, ", BIC:", aa$bic))
+# aaFitted <- aa$fitted; aaResid <- aa$residuals
+# #par(mfrow=c(2,1))#set for subplot
+# plot(fitResid, main="Residuals", lty=3,col="red");lines(aaResid, lty=4,col="blue");legend("topleft", legend=c("MyArima", "AutoArima"), col=c("red", "blue"), lty=1:2, cex=0.8)
+# #par(mfrow=c(1,1))#reset to single plots
+# plot(d, lty=c(3), col="black");lines(aaFitted, lty=c(3), main="AutoArimaFitted", ylab="people", col="blue");legend("topleft", legend=c("fitted", "original"), col=c("blue", "black"), lty=1:2, cex=0.8)
+# autoF5 <- forecast(aa,h=5)
+# autoF15 <- forecast(aa,h=15)
+# print(cat("Auto arima estimated for F5: ", autoF5$method));print(cat("Auto arima estimated for F15: ", autoF15$method))
+#
+# #---plot all pred
+# colorOrder = c("black","green","red","blue","cyan")
+# ts.plot(d, oriPred5$pred, oriPred15$pred, autoF5$mean, autoF15$mean, log = "y", lty = c(3,2,3,6,7), col=colorOrder, ylab="people", main="Predictions");legend("topleft", legend=c("d","ori5", "ori15", "auto5", "auto15"), col=colorOrder, lty=1:2, cex=0.8)
+# am5 <- meanSquaredError(te[1:shortPredAhead], autoF5$mean[1:shortPredAhead])
+# am15 <- meanSquaredError(te[1:shortPredAhead], autoF15$mean[1:longPredAhead])
 
-#---auto arima
-aa <- auto.arima(tr)
-print(cat("AutoArima: AIC:", aa$aic, ", AICC:", aa$aicc, ", ARMA:", aa$arma, ", BIC:", aa$bic))
-aaFitted <- aa$fitted; aaResid <- aa$residuals
-#par(mfrow=c(2,1))#set for subplot
-plot(fitResid, main="Residuals", lty=3,col="red");lines(aaResid, lty=4,col="blue");legend("topleft", legend=c("MyArima", "AutoArima"), col=c("red", "blue"), lty=1:2, cex=0.8)
-#par(mfrow=c(1,1))#reset to single plots
-plot(d, lty=c(3), col="black");lines(aaFitted, lty=c(3), main="AutoArimaFitted", ylab="people", col="blue");legend("topleft", legend=c("fitted", "original"), col=c("blue", "black"), lty=1:2, cex=0.8)
-autoF5 <- forecast(aa,h=5)
-autoF15 <- forecast(aa,h=15)
-print(cat("Auto arima estimated for F5: ", autoF5$method));print(cat("Auto arima estimated for F15: ", autoF15$method))
+#---trend
+trnd <- rollmean(d, meanRng, align = c("left"))
+plot(trnd, main="Trend")
+#---residual
+residu <- d[1:length(trnd)] - trnd
+plot(residu, main="Residue")
 
-#---plot all pred
-colorOrder = c("black","green","red","blue","cyan")
-ts.plot(d, oriPred5$pred, oriPred15$pred, autoF5$mean, autoF15$mean, log = "y", lty = c(3,2,3,6,7), col=colorOrder, ylab="people", main="Predictions");legend("topleft", legend=c("d","ori5", "ori15", "auto5", "auto15"), col=colorOrder, lty=1:2, cex=0.8)
-am5 <- meanSquaredError(te[1:shortPredAhead], autoF5$mean[1:shortPredAhead])
-am15 <- meanSquaredError(te[1:shortPredAhead], autoF15$mean[1:longPredAhead])
+#---ANN
+#prepare data
+# v=c();for (i in residu) {print(i);v=append(v,i);}
+
+s = seq(1:length(tr))
+incr = 1
+df = data.frame()
+while ((incr+timePer) < length(tr)) {
+    df <- rbind(df, tr[incr:(incr+timePer-1)])
+    incr = incr + 1;
+}
+
+
+
+# mlp.fit <- mlp(tr, tr)
+# plot(mlp.fit$fitted.values)
+
+
+
+## Creating index variable
+# # Read the Data
+# data = read.csv("cereals.csv", header=T)
+#
+# # Random sampling
+# samplesize = 0.60 * nrow(data)
+# set.seed(80)
+# index = sample( seq_len ( nrow ( data ) ), size = samplesize )
+#
+# # Create training and test set
+# datatrain = data[ index, ]
+# datatest = data[ -index, ]
+# ## Scale data for neural network
+#
+# max = apply(data , 2 , max)
+# min = apply(data, 2 , min)
+# scaled = as.data.frame(scale(data, center = min, scale = max - min))
+# trainNN = scaled[index , ]
+# testNN = scaled[-index , ]
+#
+# # fit neural network
+# set.seed(2)
+# NN = neuralnet(rating ~ calories + protein + fat + sodium + fiber, trainNN, hidden = 3 , linear.output = T )
+# # plot neural network
+# plot(NN)
+# ## Prediction using neural network
+#
+# predict_testNN = compute(NN, testNN[,c(1:5)])
+# predict_testNN = (predict_testNN$net.result * (max(data$rating) - min(data$rating))) + min(data$rating)
+# plot(datatest$rating, predict_testNN, col='blue', pch=16, ylab = "predicted rating NN", xlab = "real rating")
+# abline(0,1)
+#
+# # Calculate Root Mean Square Error (RMSE)
+# RMSE.NN = (sum((datatest$rating - predict_testNN)^2) / nrow(datatest)) ^ 0.5
+
 
 
 
 # lines(c(trainEnYr+1,trainEnYr+1+(longPredAhead/12)), c(300,300))
 
-# trnd <- rollmean(d, meanRng, align = c("left"))
+
 # plot(d, main="Original plot", xlab="years", ylab="numPassenger", lty=c(3))
 # lines(trnd, lty=c(1), col="red")
 # resid <- d - trnd
