@@ -45,7 +45,7 @@ trainStYr = stYr; trainEnYr = enYr - 4;
 testStYr = trainEnYr; testEnYr = enYr;
 longPredAhead = 15
 shortPredAhead = 5
-meanRng = 3;#25;
+meanRng = 3;#25;#window size for mean
 timePer = 12#time period
 
 if (isTRUE(isStationary(d))) {print("is stationary")} else {print("is not stationary")}
@@ -61,7 +61,7 @@ legend("topleft", legend=c("training", "test"), col=colorOrder, lty=1:2, cex=0.8
 
 #---predict with normal arima
 arimaParam = c(1, 2, 2)
-print(cat("Using arima: ", autoF5$method))
+#print(cat("Using arima: ", autoF5$method))
 fit <- arima(tr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
 print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
 fitResid <- fit$residuals
@@ -71,23 +71,23 @@ m5 <- meanSquaredError(te[1:shortPredAhead], oriPred5$pred[1:shortPredAhead])
 m15 <- meanSquaredError(te[1:shortPredAhead], oriPred15$pred[1:longPredAhead])
 plot(m15, xlab="time", ylab="error", main="MSE MyArima", lty=2, col="red");lines(m5, lty=3, col="blue");legend("topleft", legend=c("pred15", "pred5"), col=c("red", "blue"), lty=1:2, cex=0.8)
 
-# #---auto arima
-# aa <- auto.arima(tr)
-# print(cat("AutoArima: AIC:", aa$aic, ", AICC:", aa$aicc, ", ARMA:", aa$arma, ", BIC:", aa$bic))
-# aaFitted <- aa$fitted; aaResid <- aa$residuals
-# #par(mfrow=c(2,1))#set for subplot
-# plot(fitResid, main="Residuals", lty=3,col="red");lines(aaResid, lty=4,col="blue");legend("topleft", legend=c("MyArima", "AutoArima"), col=c("red", "blue"), lty=1:2, cex=0.8)
-# #par(mfrow=c(1,1))#reset to single plots
-# plot(d, lty=c(3), col="black");lines(aaFitted, lty=c(3), main="AutoArimaFitted", ylab="people", col="blue");legend("topleft", legend=c("fitted", "original"), col=c("blue", "black"), lty=1:2, cex=0.8)
-# autoF5 <- forecast(aa,h=5)
-# autoF15 <- forecast(aa,h=15)
-# print(cat("Auto arima estimated for F5: ", autoF5$method));print(cat("Auto arima estimated for F15: ", autoF15$method))
-#
-# #---plot all pred
-# colorOrder = c("black","green","red","blue","cyan")
-# ts.plot(d, oriPred5$pred, oriPred15$pred, autoF5$mean, autoF15$mean, log = "y", lty = c(3,2,3,6,7), col=colorOrder, ylab="people", main="Predictions");legend("topleft", legend=c("d","ori5", "ori15", "auto5", "auto15"), col=colorOrder, lty=1:2, cex=0.8)
-# am5 <- meanSquaredError(te[1:shortPredAhead], autoF5$mean[1:shortPredAhead])
-# am15 <- meanSquaredError(te[1:shortPredAhead], autoF15$mean[1:longPredAhead])
+#---auto arima
+aa <- auto.arima(tr)
+print(cat("AutoArima: AIC:", aa$aic, ", AICC:", aa$aicc, ", ARMA:", aa$arma, ", BIC:", aa$bic))
+aaFitted <- aa$fitted; aaResid <- aa$residuals
+#par(mfrow=c(2,1))#set for subplot
+plot(fitResid, main="Residuals", lty=3,col="red");lines(aaResid, lty=4,col="blue");legend("topleft", legend=c("MyArima", "AutoArima"), col=c("red", "blue"), lty=1:2, cex=0.8)
+#par(mfrow=c(1,1))#reset to single plots
+plot(d, lty=c(3), col="black");lines(aaFitted, lty=c(3), main="AutoArimaFitted", ylab="people", col="blue");legend("topleft", legend=c("fitted", "original"), col=c("blue", "black"), lty=1:2, cex=0.8)
+autoF5 <- forecast(aa,h=5)
+autoF15 <- forecast(aa,h=15)
+print(cat("Auto arima estimated for F5: ", autoF5$method));print(cat("Auto arima estimated for F15: ", autoF15$method))
+
+#---plot all pred
+colorOrder = c("black","green","red","blue","cyan")
+ts.plot(d, oriPred5$pred, oriPred15$pred, autoF5$mean, autoF15$mean, log = "y", lty = c(3,2,3,6,7), col=colorOrder, ylab="people", main="Predictions");legend("topleft", legend=c("d","ori5", "ori15", "auto5", "auto15"), col=colorOrder, lty=1:2, cex=0.8)
+am5 <- meanSquaredError(te[1:shortPredAhead], autoF5$mean[1:shortPredAhead])
+am15 <- meanSquaredError(te[1:shortPredAhead], autoF15$mean[1:longPredAhead])
 
 #---trend
 trnd <- rollmean(d, meanRng, align = c("left"))
@@ -97,17 +97,37 @@ residu <- d[1:length(trnd)] - trnd;#residue = original - trend
 plot(residu, main="Residue")
 
 #---ANN
-air.train <- window(residu, end = trainEnYr)
-autoplot(air.train) + ylab("Passengers") + ggtitle("Training")
-air.test <- window(residu, start = testStYr)
-autoplot(air.test) + ylab("Passengers") + ggtitle("Testing")
-# Fitting MLP model
-air.fit.mlp <- mlp(air.train, hd.auto.type = "valid")
-air.fcst.mlp <- forecast(air.fit.mlp, h = 35)
-# Visualize model predictions
-autoplot(air.test) + autolayer(air.fcst.mlp, series = "MLP w/ opt. hidden nodes", linetype = "dashed") + theme_minimal() + ylab("Number of Passengers")
+annTrain <- window(residu, end = trainEnYr+1)
+annTrain <- head(annTrain, -1)#remove last row
+#annTest <- window(residu, start = testStYr)
+autoplot(annTest) + ylab("people") + ggtitle("Testing"); autoplot(annTrain) + ylab("people") + ggtitle("Training")
+annFit <- mlp(annTrain, hd.auto.type = "valid")
+annShortForecast <- forecast(annFit, h = shortPredAhead+1)
+annLongForecast <- forecast(annFit, h = longPredAhead+1)
+autoplot(annTest) + autolayer(annShortForecast, series = "short", linetype = "dotted") + autolayer(annLongForecast, series = "long", linetype = "dashed") + ylab("people")
 
+#---predict trend with arima
+trndTr <- window(trnd, start=trainStYr, end=c(trainEnYr, timePer))
+if (isTRUE(isStationary(trndTr))) {print("is stationary")} else {print("is not stationary")}
+showACFPlots(diff(diff(trndTr)))
+arimaParam = c(1, 2, 2)
+fit <- arima(trndTr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
+print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
+trndPred5 <- predict(fit, n.ahead = shortPredAhead)
+trndPred15 <- predict(fit, n.ahead = longPredAhead)
 
+#---sum up trend and residue predictions
+trndTest <- trndPred15$pred[1:longPredAhead]
+residuTest <- window(residu, start = testStYr+1)
+residuTest <- residuTest[1:longPredAhead]
+#---get values
+actual <- te[1:longPredAhead]
+oriArima <- oriPred15$pred[1:longPredAhead]
+sumTrRe <- trndTest + residuTest
+
+plot(sqrt((actual-oriArima)^2), main="Difference from actual", col="blue", lty=3)
+lines(sqrt((actual-sumTrRe)^2), col="red", lty=3)
+print(cat("Sum MSE oriArima:",sum(sqrt((actual-oriArima)^2)),", sum MSE TrRe:",sum(sqrt((actual-sumTrRe)^2))))
 
 
 # #prepare data
@@ -216,8 +236,8 @@ autoplot(air.test) + autolayer(air.fcst.mlp, series = "MLP w/ opt. hidden nodes"
 # adft = adf.test(diff(log(d)), alternative="stationary", k=0)
 
 #---dividing into test and training sets
-tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
-te = window(d, start=trainEnYr, end=c(testEnYr, timePer))
+# tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
+# te = window(d, start=trainEnYr, end=c(testEnYr, timePer))
 # #---predict with normal arima
 # acf(diff(log(tr)))
 # pacf(diff(log(tr)))
