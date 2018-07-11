@@ -15,13 +15,13 @@ require(graphics)
 #library(neuralnet)
 #library(RSNNS)
 library(nnfor)
+library(rstudioapi);rstudioapi::getActiveDocumentContext()$path#set path as current working directory
 #if(!is.null(dev.list())) dev.off()#clear old plots
 cat("\f")#clear console
 #rm(list = setdiff(ls(), lsf.str()))#remove all objects except functions
 #rm(list=ls())#remove all objects loaded into R
 #rm(list=lsf.str())#remove all functions but not variables
 #rm(list=ls(all=TRUE))#clear all variables
-library(rstudioapi);rstudioapi::getActiveDocumentContext()$path#set path as current working directory
 
 # fileName = "monthly-water-usage-mlday-london.csv"
 # dd<-read.csv(fileName, header=TRUE, sep=",", stringsAsFactors=FALSE)
@@ -52,7 +52,7 @@ if (isTRUE(isStationary(d))) {print("is stationary")} else {print("is not statio
 #showACFPlots(d)
 showACFPlots(diff(d))
 
-#---dividing into test and training sets
+#---dividing into test and training sets (test data is not needed in this program)
 colorOrder=c("black", "red")
 tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
 te = window(d, start=testStYr+1, end=c(testEnYr, timePer))
@@ -65,6 +65,7 @@ arimaParam = c(1, 1, 1)
 fit <- arima(tr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
 print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
 fitResid <- fit$residuals
+plot(fitResid, main="MyArima residuals")
 oriPred5 <- predict(fit, n.ahead = shortPredAhead)
 oriPred15 <- predict(fit, n.ahead = longPredAhead)
 m5 <- meanSquaredError(te[1:shortPredAhead], oriPred5$pred[1:shortPredAhead])
@@ -75,6 +76,7 @@ plot(m15, xlab="time", ylab="error", main="MSE MyArima", lty=2, col="red");lines
 aa <- auto.arima(tr)
 print(cat("AutoArima: AIC:", aa$aic, ", AICC:", aa$aicc, ", ARMA:", aa$arma, ", BIC:", aa$bic))
 aaFitted <- aa$fitted; aaResid <- aa$residuals
+plot(aaResid, main="AutoArima residuals")
 #par(mfrow=c(2,1))#set for subplot
 plot(fitResid, main="Residuals", lty=3,col="red");lines(aaResid, lty=4,col="blue");legend("topleft", legend=c("MyArima", "AutoArima"), col=c("red", "blue"), lty=1:2, cex=0.8)
 #par(mfrow=c(1,1))#reset to single plots
@@ -100,11 +102,12 @@ plot(residu, main="Residue")
 annTrain <- window(residu, end = trainEnYr+1)
 annTrain <- head(annTrain, -1)#remove last row
 #annTest <- window(residu, start = testStYr)
-autoplot(annTest) + ylab("people") + ggtitle("Testing"); autoplot(annTrain) + ylab("people") + ggtitle("Training")
+autoplot(annTrain) + ylab("people") + ggtitle("Training")
 annFit <- mlp(annTrain, hd.auto.type = "valid")
 annShortForecast <- forecast(annFit, h = shortPredAhead+1)
 annLongForecast <- forecast(annFit, h = longPredAhead+1)
 autoplot(annTest) + autolayer(annShortForecast, series = "short", linetype = "dotted") + autolayer(annLongForecast, series = "long", linetype = "dashed") + ylab("people")
+plot(annFit)
 
 #---predict trend with arima
 trndTr <- window(trnd, start=trainStYr, end=c(trainEnYr, timePer))
@@ -125,205 +128,10 @@ actual <- te[1:longPredAhead]
 oriArima <- oriPred15$pred[1:longPredAhead]
 sumTrRe <- trndTest + residuTest
 
-plot(sqrt((actual-oriArima)^2), main="Difference from actual", col="blue", lty=3)
+plot(sqrt((actual-oriArima)^2), main="MSE. MyArima vs improved Arima", col="blue", lty=3, xlab="forecast instance",ylab="MSE")
 lines(sqrt((actual-sumTrRe)^2), col="red", lty=3)
 print(cat("Sum MSE oriArima:",sum(sqrt((actual-oriArima)^2)),", sum MSE TrRe:",sum(sqrt((actual-sumTrRe)^2))))
-
-
-# #prepare data
-# s = seq(1:length(tr))
-# incr = 1
-# ddd = data.frame()
-# while ((incr+timePer) < length(tr)) {
-#     ddd <- rbind(ddd, tr[incr:(incr+timePer)])#13 cols = 12 train + 1 target
-#     incr = incr + 1;
-# }
-# #shuffle ddd
-# ddd <- ddd[sample(1:nrow(ddd),length(1:nrow(ddd))), 1:ncol(ddd)]
-#
-# traValues <- ddd[,1:timePer]
-# traTargets <- decodeClassLabels(ddd[,timePer+1])
-
-
-
-
-# mlp.fit <- mlp(tr, tr)
-# plot(mlp.fit$fitted.values)
-
-
-
-## Creating index variable
-# # Read the Data
-# data = read.csv("cereals.csv", header=T)
-#
-# # Random sampling
-# samplesize = 0.60 * nrow(data)
-# set.seed(80)
-# index = sample( seq_len ( nrow ( data ) ), size = samplesize )
-#
-# # Create training and test set
-# datatrain = data[ index, ]
-# datatest = data[ -index, ]
-# ## Scale data for neural network
-#
-# max = apply(data , 2 , max)
-# min = apply(data, 2 , min)
-# scaled = as.data.frame(scale(data, center = min, scale = max - min))
-# trainNN = scaled[index , ]
-# testNN = scaled[-index , ]
-#
-# # fit neural network
-# set.seed(2)
-# NN = neuralnet(rating ~ calories + protein + fat + sodium + fiber, trainNN, hidden = 3 , linear.output = T )
-# # plot neural network
-# plot(NN)
-# ## Prediction using neural network
-#
-# predict_testNN = compute(NN, testNN[,c(1:5)])
-# predict_testNN = (predict_testNN$net.result * (max(data$rating) - min(data$rating))) + min(data$rating)
-# plot(datatest$rating, predict_testNN, col='blue', pch=16, ylab = "predicted rating NN", xlab = "real rating")
-# abline(0,1)
-#
-# # Calculate Root Mean Square Error (RMSE)
-# RMSE.NN = (sum((datatest$rating - predict_testNN)^2) / nrow(datatest)) ^ 0.5
-
-
-
-
-# lines(c(trainEnYr+1,trainEnYr+1+(longPredAhead/12)), c(300,300))
-
-
-# plot(d, main="Original plot", xlab="years", ylab="numPassenger", lty=c(3))
-# lines(trnd, lty=c(1), col="red")
-# resid <- d - trnd
-# plot(resid, lty=c(1), col="green")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#plot(decompose(d,"multiplicative"))
-#compo <- stl(d, s.window="periodic")
-#plot(compo, main="stl components", lty=c(4), col="red")#display season, trend, ramainder
-#deSeas <- seasadj(decompose(d, "multiplicative"));
-#plot(deSeas, main="seasonalityAdjusted")
-#ad <- adf.test(deSeas, alternative="stationary");#The augmented Dickey-Fuller (ADF) test is a formal statistical test for stationarity. The null hypothesis assumes that the series is non-stationary. ADF procedure tests whether the change in Y can be explained by lagged value and a linear trend. If contribution of the lagged value to the change in Y is non-significant and there is a presence of a trend component, the series is non-stationary and null hypothesis will not be rejected.
-#plot(decompose(deSeas, "multiplicative"))#why is seasonality still shown?
-
-
-
-# lines(tsclean(d), main="Original plot", xlab="years", ylab="temperature", lty=c(4), col="red")
-# plot(diff(d), main="Original plot", xlab="years", ylab="temperature", lty=c(4), col="red")
-# abline(reg=lm(d~time(d)))
-# message("Type:",class(d));message("Starts at:",start(d));message("Ends at:",end(d));message("Frequency:",frequency(d));print(summary(d))#cycle(d)
-# plot(aggregate(d,FUN=mean))#shows yearly trend
-# boxplot(d~cycle(d))#plot across months. Shows seasonality
-# plot(log(d), main="log(d) removes unequal variances", xlab="years", ylab="temperature")
-# plot(diff(log(d)), main="diff(log(d) de-trends", xlab="years", ylab="temperature")
-# #plot(log(diff(d)), main="As log(diff(d))", xlab="years", ylab="temperature")
-# adft = adf.test(diff(log(d)), alternative="stationary", k=0)
-
-#---dividing into test and training sets
-# tr = window(d, start=trainStYr, end=c(trainEnYr, timePer))
-# te = window(d, start=trainEnYr, end=c(testEnYr, timePer))
-# #---predict with normal arima
-# acf(diff(log(tr)))
-# pacf(diff(log(tr)))
-# fit <- arima(log(tr), c(2, 1, 1),seasonal = list(order = c(2, 1, 1), period = timePer))
-# oriPred5 <- predict(fit, n.ahead = shortPredAhead)
-# oriPred15 <- predict(fit, n.ahead = longPredAhead)
-# oriPred5$pred = exp(oriPred5$pred)
-# oriPred15$pred = exp(oriPred15$pred)
-# #---auto arima
-# aa <- auto.arima(tr)
-# autoF5 <- forecast(aa,h=5)
-# autoF15 <- forecast(aa,h=15)
-# #---plot all
-# ts.plot(d, oriPred5$pred, oriPred15$pred, autoF5$Forecast, autoF15$Forecast, log = "y", lty = c(3,2,3,4,5), col=c("black","green","red","yellow","blue"))
-# #---calculate moving average
-# ma <- rollmean(d, 10, align = c("left"))
-# plot(ma, lty=c(2), col=c("black"))
-# lines(d, lty=c(3), col=c("red"))
-# #---get arima for moving average
-# acf(diff(diff(ma)))
-# pacf(diff(diff(ma)))
-# maFit <- arima(ma, c(2, 2, 1),seasonal = list(order = c(2, 2, 1), period = timePer))
-# maPred5 <- predict(maFit, n.ahead = shortPredAhead)
-# maPred15 <- predict(maFit, n.ahead = longPredAhead)
-# #ts.plot(d, maPred5$pred, maPred15$pred, log = "y", lty = c(3,2,3), col=c("black","green","red"))
-#---exponential smoothing
-# es <- exponential.smooth(d, .1)
-# plot(d, lty=c(3), col=c("red"))
-# plot(diff(diff(es)), lty=c(2), col=c("black"))
-# acf(diff(diff(es)))
-
-
-
-
-
-# #---checking for stationarity and predict
-# acf(diff(log(d)))
-# pacf(diff(log(d)))
-# fitTr <- arima(log(tr), c(1,1,2),seasonal=list(order=c(1,1,2),period=timePer))
-# trPred <- predict(fitTr, n.ahead=shortPredAhead*timePer)
-# ts.plot(d,tr,exp(trPred$pred), log = "y", lty = c(3,3,3), col=c("green","blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
-# #---measure errors
-# p1 = exp(trPred$pred[1:(shortPredAhead*timePer)])
-# p2 = te[1:(shortPredAhead*timePer)]
-# er = p1 - p2
-# plot(er)
-# meanSquaredError(p2, p1)
-
-
-# testLim = 40
-# predAhead = 20
-# plot(d, main="Main plot", xlab="years", ylab="temperature")
-# abline(reg=lm(d~time(d)))
-# message("Type:",class(d))
-# message("Starts at:",start(d))
-# message("Ends at:",end(d))
-# message("Frequency:",frequency(d))
-# print(summary(d))#cycle(d)
-# plot(aggregate(d,FUN=mean))#shows yearly trend
-# boxplot(d~cycle(d))#plot across months. Shows seasonality
-# plot(log(d), main="log(d) removes unequal variances", xlab="years", ylab="temperature")
-# plot(diff(log(d)), main="diff(log(d) de-trends", xlab="years", ylab="temperature")
-# #plot(log(diff(d)), main="As log(diff(d))", xlab="years", ylab="temperature")
-# adft = adf.test(diff(log(d)), alternative="stationary", k=0)
-# acf(diff(log(d)))
-# pacf(diff(log(d)))
-# fit <- arima(log(d), c(0, 1, 1),seasonal = list(order = c(0, 1, 1), period = 12))
-# pred <- predict(fit, n.ahead = 15*12)
-# ts.plot(d,exp(pred$pred), log = "y", lty = c(1,3), col=c("blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
-#
-# #---dividing into test and training sets
-# tr = window(d, start=1949, end=c(1955,12))
-# te = window(d, start=1956, end=c(1960,12))
-# #---checking for stationarity and predict
-# acf(diff(log(d)))
-# pacf(diff(log(d)))
-# fitTr <- arima(log(tr), c(1,1,2),seasonal=list(order=c(1,1,2),period=12))
-# trPred <- predict(fitTr, n.ahead=5*12)
-# ts.plot(d,tr,exp(trPred$pred), log = "y", lty = c(3,3,3), col=c("green","blue","red"))#Plots multiple time series on same plot. lty is line type 1 for first time series. 3 for second time series
-# #---measure errors
-# p1 = exp(trPred$pred[1:(5*12)])
-# p2 = te[1:(5*12)]
-# er = p1 - p2
-# plot(er)
-# meanSquaredError(p2, p1)
-
+legend("topleft", legend=c("actual-MyArima", "actual-sum(ANN+trend)"), col=c("blue","red"), lty=1:2, cex=0.8)
 
 meanSquaredError <- function(original, predicted) {
     original = na.trim(original)
@@ -335,10 +143,8 @@ meanSquaredError <- function(original, predicted) {
 # A function to do exponential smoothing:
 exponential.smooth <- function(x, lambda)
 {
-    if(length(lambda) > 1)
-        stop("lambda must be a single number")
-    if(lambda > 1 || lambda <= 0)
-        stop("lambda must be between zero and one")
+    if(length(lambda) > 1) {stop("lambda must be a single number")}
+    if(lambda > 1 || lambda <= 0) {stop("lambda must be between zero and one")}
     xlam <- x * lambda
     xlam[1] <- x[1]
     filter(xlam, filter = 1 - lambda, method = "rec")
@@ -352,68 +158,9 @@ isStationary <- function(d) {
 }
 
 showACFPlots <- function(d) {
-    acf(d)
-    pacf(d)
+    pacf(d, main="PACF")
+    acf(d, main="ACF")
 }
-
-
-#converting to time series
-#series<-ts(d,frequency=12,start=c(1969,1))
-#If data was uploaded as a dataframe, specify the col with precision
-#series<-ts(dat[[1]], frequency=12,start=c(1969,1))
-
-
-# d=rollmean(d,15)
-# plot(d, main="Mean plot", xlab="years", ylab="temperature", col="red")
-# d=diff(d)
-# plot(d, main="DiffMean plot", xlab="years", ylab="temperature", col="green")
-#
-# # d<- HoltWinters(d,beta=FALSE,gamma=FALSE, seasonal="multiplicative")
-# # lines(fitted(d)[,1], col=3)
-#
-#
-#
-# acf(d); pacf(d);
-#
-# ad = adf.test(d)
-# dat = d[1:testLim]
-# ar = arima(dat, c(1,0,8))
-# ar2 = arima(dat, c(2,0,9))
-# pr = predict(ar, n.ahead=predAhead)
-# pr2 = predict(ar2, n.ahead=predAhead)
-# plot(dat, type="o")
-# asd = c(d[testLim+1], pr$pred)
-# lines(seq(testLim,length(d)), c(d[testLim+1], pr$pred), type="o", col="green")
-# lines(seq(testLim,length(d)), c(d[testLim+1], pr$pred), type="o", col="red")
-#
-# dat = na.trim(d[testLim+1:length(d)])
-# meanSquaredError(dat, pr$pred)
-#
-#
-# meanSquaredError <- function(original, predicted) {
-#     original = na.trim(original)
-#     predicted = na.trim(predicted)
-#     original
-#     predicted
-#     m = (original - predicted)^2
-#     plot(m, main="MSE", xlab="error")
-#     print(m)
-# }
-
-# a. Original dataset
-# b. Apply any filter to get trend dataset
-# c. Residual data set = original dataset - trend dataset
-# d. Now got two datasets 1. Residual dataset and 2. trend datasets
-# e. Apply ARIMA for the above two datasets separately or apply ARIMA
-#     for one dataset and other technique/s (ANN, fuzzy etc) on
-#     the other dataset. Use your discretion which one applies as per your
-#     previous knowledge.
-# f. Add the obtained predictions to get final predications
-# g. Now consider the original dataset and apply arima on it.
-# h. compare f and g.
-# i. For more details see the papers on it. There are many Eg: Predictive
-#     data mining on average global temperature using variants of ARIMA models.
-#MAPE (Mean Absolute Percentage Error), MaxAPE (Maximum Absolute Percentage Error) and MAE (Mean Absolute Error) have been used as a performance measures to compare between the models
 
 # #single exponential smoothing
 # library(expsmooth)
