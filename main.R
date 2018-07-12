@@ -50,7 +50,7 @@ timePer = 12#time period
 
 if (isTRUE(isStationary(d))) {print("is stationary")} else {print("is not stationary")}
 #showACFPlots(d)
-showACFPlots(diff(d))
+showACFPlots(d)
 
 #---dividing into test and training sets (test data is not needed in this program)
 colorOrder=c("black", "red")
@@ -60,7 +60,7 @@ ts.plot(tr, te, lty = c(4,3), col=colorOrder, ylab="people", main="Train.Test")
 legend("topleft", legend=c("training", "test"), col=colorOrder, lty=1:2, cex=0.8)
 
 #---predict with normal arima
-arimaParam = c(1, 1, 1)
+arimaParam = c(1.1, 0, 0)
 #print(cat("Using arima: ", autoF5$method))
 fit <- arima(tr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
 print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
