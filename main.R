@@ -106,7 +106,8 @@ autoplot(annTrain) + ylab("people") + ggtitle("Training")
 annFit <- mlp(annTrain, hd.auto.type = "valid")
 annShortForecast <- forecast(annFit, h = shortPredAhead+1)
 annLongForecast <- forecast(annFit, h = longPredAhead+1)
-autoplot(annTest) + autolayer(annShortForecast, series = "short", linetype = "dotted") + autolayer(annLongForecast, series = "long", linetype = "dashed") + ylab("people")
+plot(annLongForecast)
+#autoplot(annTest) + autolayer(annShortForecast, series = "short", linetype = "dotted") + autolayer(annLongForecast, series = "long", linetype = "dashed") + ylab("people")
 plot(annFit)
 
 #---predict trend with arima
@@ -115,14 +116,14 @@ if (isTRUE(isStationary(trndTr))) {print("is stationary")} else {print("is not s
 showACFPlots(diff(diff(trndTr)))
 arimaParam = c(1, 2, 2)
 fit <- arima(trndTr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
-print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
+print(cat("Arima (trend): AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
 trndPred5 <- predict(fit, n.ahead = shortPredAhead)
 trndPred15 <- predict(fit, n.ahead = longPredAhead)
 
 #---sum up trend and residue predictions
 trndTest <- trndPred15$pred[1:longPredAhead]
-residuTest <- window(residu, start = testStYr+1)
-residuTest <- residuTest[1:longPredAhead]
+#residuTest <- window(residu, start = testStYr+1)
+residuTest <- annLongForecast$mean[1:longPredAhead]
 #---get values
 actual <- te[1:longPredAhead]
 oriArima <- oriPred15$pred[1:longPredAhead]
