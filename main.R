@@ -121,8 +121,8 @@ trndPred15 <- predict(fit, n.ahead = longPredAhead)
 
 #---sum up trend and residue predictions
 trndTest <- trndPred15$pred[1:longPredAhead]
-residuTest <- window(residu, start = testStYr+1)
-residuTest <- residuTest[1:longPredAhead]
+#residuTest <- window(residu, start = testStYr+1)
+residuTest <- annLongForecast$mean[1:longPredAhead]
 #---get values
 actual <- te[1:longPredAhead]
 oriArima <- oriPred15$pred[1:longPredAhead]
