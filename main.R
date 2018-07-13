@@ -108,6 +108,7 @@ annShortForecast <- forecast(annFit, h = shortPredAhead+1)
 annLongForecast <- forecast(annFit, h = longPredAhead+1)
 autoplot(annTest) + autolayer(annShortForecast, series = "short", linetype = "dotted") + autolayer(annLongForecast, series = "long", linetype = "dashed") + ylab("people")
 plot(annFit)
+plot(annLongForecast)
 
 #---predict trend with arima
 trndTr <- window(trnd, start=trainStYr, end=c(trainEnYr, timePer))
@@ -121,7 +122,7 @@ trndPred15 <- predict(fit, n.ahead = longPredAhead)
 
 #---sum up trend and residue predictions
 trndTest <- trndPred15$pred[1:longPredAhead]
-residuTest <- annLongForecast[1:longPredAhead]
+residuTest <- annLongForecast$mean[1:longPredAhead]
 #---get values
 actual <- te[1:longPredAhead]
 oriArima <- oriPred15$pred[1:longPredAhead]
