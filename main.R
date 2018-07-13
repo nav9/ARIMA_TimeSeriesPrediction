@@ -40,16 +40,17 @@ d = datasets::AirPassengers#for strong seasonality and trend
 #d = datasets::USAccDeaths#strong seasonality but no trend
 #plot(d, main="Data")
 
-stYr = 1949; enYr = 1960
-trainStYr = stYr; trainEnYr = enYr - 4;
+stYr = 1; enYr = 150
+trainStYr = stYr; trainEnYr = enYr - 50;
 testStYr = trainEnYr; testEnYr = enYr;
 longPredAhead = 15
 shortPredAhead = 5
 meanRng = 3;#25;#window size for mean
-timePer = 12#time period
+timePer = 1#time period
 
+plot(d, main="BJSales",ylab="sales")
 if (isTRUE(isStationary(d))) {print("is stationary")} else {print("is not stationary")}
-#showACFPlots(d)
+showACFPlots(d)
 showACFPlots(diff(d))
 
 #---dividing into test and training sets (test data is not needed in this program)
@@ -60,7 +61,7 @@ ts.plot(tr, te, lty = c(4,3), col=colorOrder, ylab="people", main="Train.Test")
 legend("topleft", legend=c("training", "test"), col=colorOrder, lty=1:2, cex=0.8)
 
 #---predict with normal arima
-arimaParam = c(1, 1, 1)
+arimaParam = c(2, 1, 4)
 #print(cat("Using arima: ", autoF5$method))
 fit <- arima(tr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
 print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
@@ -100,9 +101,8 @@ plot(residu, main="Residue")
 
 #---ANN
 annTrain <- window(residu, end = trainEnYr+1)
-annTrain <- head(annTrain, -1)#remove last row
-#annTest <- window(residu, start = testStYr)
-autoplot(annTrain) + ylab("people") + ggtitle("Training")
+annTest <- window(residu, start = testStYr)
+autoplot(annTrain) + ylab("sales") + ggtitle("Training")
 annFit <- mlp(annTrain, hd.auto.type = "valid")
 annShortForecast <- forecast(annFit, h = shortPredAhead+1)
 annLongForecast <- forecast(annFit, h = longPredAhead+1)
@@ -113,16 +113,15 @@ plot(annFit)
 trndTr <- window(trnd, start=trainStYr, end=c(trainEnYr, timePer))
 if (isTRUE(isStationary(trndTr))) {print("is stationary")} else {print("is not stationary")}
 showACFPlots(diff(diff(trndTr)))
-arimaParam = c(1, 2, 2)
+arimaParam = c(11, 2, 10)
 fit <- arima(trndTr, arimaParam, seasonal = list(order = arimaParam, period = timePer))
-print(cat("MyArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
+print(cat("TrendArima: AIC:", fit$aic, ", AICC:", fit$aicc, ", ARMA:", fit$arma, ", BIC:", fit$bic))
 trndPred5 <- predict(fit, n.ahead = shortPredAhead)
 trndPred15 <- predict(fit, n.ahead = longPredAhead)
 
 #---sum up trend and residue predictions
 trndTest <- trndPred15$pred[1:longPredAhead]
-residuTest <- window(residu, start = testStYr+1)
-residuTest <- residuTest[1:longPredAhead]
+residuTest <- annLongForecast[1:longPredAhead]
 #---get values
 actual <- te[1:longPredAhead]
 oriArima <- oriPred15$pred[1:longPredAhead]
